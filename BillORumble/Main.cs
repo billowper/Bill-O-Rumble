@@ -1,5 +1,4 @@
-﻿using JetBrains.Annotations;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityModManagerNet;
 using Object = UnityEngine.Object;
 
@@ -7,8 +6,7 @@ namespace BillORumble
 {
     public class Main
     {
-        [UsedImplicitly]
-        private static bool Load(UnityModManager.ModEntry mod_entry)
+        public static bool Load(UnityModManager.ModEntry mod_entry)
         {
             mod_entry.OnToggle = OnToggle;
 
@@ -25,9 +23,9 @@ namespace BillORumble
             }
             else
             {
-                var bmm = Object.FindObjectOfType<RumbleManager>();
-                if (bmm != null) 
-                    Object.Destroy(bmm.gameObject);
+                var rm = Object.FindObjectOfType<RumbleManager>();
+                if (rm != null) 
+                    Object.Destroy(rm.gameObject);
             }
 
             return true;

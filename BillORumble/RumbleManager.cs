@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using GameManagement;
-using GUILayoutLib;
 using UnityEngine;
 
 namespace BillORumble
@@ -252,27 +251,22 @@ namespace BillORumble
 
         private void EventManager_onRunEvent(GPEvent runEvent)
         {
+            // TODO velocity/vibration scale for events types
+
             switch (runEvent)
             {
                 case BailEvent bail_event:
-                    // TODO velocity scale
                     isGrounded = false;
                     isGrinding = false;
                     InputController.Instance.player.SetVibration(motorIndex: 0, motorLevel: rumbleEvents[key: RumbleEvents.Bail].GetMotorLevel(fraction: 1f), duration: rumbleEvents[key: RumbleEvents.Bail].Time);
                     break;
                 case BrakeEvent brake_event:
-                    // TODO velocity scale
                     InputController.Instance.player.SetVibration(motorIndex: 0, motorLevel: rumbleEvents[key: RumbleEvents.Brake].GetMotorLevel(fraction: 1f), duration: rumbleEvents[key: RumbleEvents.Brake].Time);
                     break;
                 case CatchEvent catch_event:
                     InputController.Instance.player.SetVibration(motorIndex: 0, motorLevel: rumbleEvents[key: RumbleEvents.Catch].GetMotorLevel(fraction: 1f), duration: rumbleEvents[key: RumbleEvents.Catch].Time);
                     break;
-                case GrabEnterEvent grab_enter_event:
-                    break;
-                case GrabExitEvent grab_exit_event:
-                    break;
                 case GrindEnterEvent grind_enter_event:
-                    // TODO velocity scale
                     InputController.Instance.player.SetVibration(motorIndex: 0, motorLevel: rumbleEvents[key: RumbleEvents.GrindEnter].GetMotorLevel(fraction: 1f), duration: rumbleEvents[key: RumbleEvents.GrindEnter].Time);
                     isGrinding = true;
                     break;
@@ -284,30 +278,8 @@ namespace BillORumble
                     isGrinding = false;
                     InputController.Instance.player.SetVibration(motorIndex: 0, motorLevel: rumbleEvents[key: RumbleEvents.Pop].GetMotorLevel(fraction: Mathf.Clamp01(value: jump_event.popForce / maxJumpForce)), duration: rumbleEvents[key: RumbleEvents.Pop].Time);
                     break;
-                case LandEvent land_event:
-                    break;
-                case ManualEnterEvent manual_enter_event:
-                    break;
-                case ManualExitEvent manual_exit_event:
-                    break;
-                case PinEvent pin_event:
-                    break;
-                case PowerSlideEnterEvent power_slide_enter_event:
-                    break;
-                case PowerSlideExitEvent power_slide_exit_event:
-                    break;
                 case PushEvent push_event:
                     InputController.Instance.player.SetVibration(motorIndex: 0, motorLevel: rumbleEvents[key: RumbleEvents.Push].GetMotorLevel(fraction: 1f), duration: rumbleEvents[key: RumbleEvents.Push].Time);
-                    break;
-                case ReleaseEvent release_event:
-                    break;
-                case RespawnEvent respawn_event:
-                    break;
-                case TrickComboEndEvent trick_combo_end_event:
-                    break;
-                case TrickComboStartEvent trick_combo_start_event:
-                    break;
-                case TrickEvent trick_event:
                     break;
             }
         }
