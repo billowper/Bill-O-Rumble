@@ -1,4 +1,4 @@
-# Bill O Rumble
+# Bill O'Rumble
  
 Controller rumble/vibration mod for Skater XL. Requires Unity Mod Manager.
 
