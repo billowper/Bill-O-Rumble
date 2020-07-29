@@ -151,15 +151,15 @@ namespace BillORumble
 
         private void GameStateMachine_OnGameStateChanged(Type prevState, Type newState)
         {
-            if (newState == typeof(ReplayState))
+            if (newState == typeof(PlayState))
+            {
+                doRumble = true;
+            }
+            else
             {
                 InputController.Instance.player.StopVibration();
 
                 doRumble = false;
-            }
-            else
-            {
-                doRumble = true;
             }
         }
 
