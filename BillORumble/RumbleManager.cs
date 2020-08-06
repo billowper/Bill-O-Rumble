@@ -84,11 +84,20 @@ namespace BillORumble
 
 		// state
 
+	    private bool showUI;
+
         private bool doRumble = true;
+        private bool isSkating;
         private bool isGrinding;
         private bool isGrounded;
         private bool wasPowerSliding;
-        private bool showUI;
+	    private float maxHeight = Mathf.NegativeInfinity;
+	    private float dropHeight;
+
+		// helpers
+
+	    private Vector3 boardVelocity => PlayerController.Instance.boardController.boardRigidbody.velocity;
+	    private float boardHeight => PlayerController.Instance.boardController.boardTransform.position.y;
 
         private void OnEnable()
         {
@@ -188,7 +197,7 @@ namespace BillORumble
         {
 	        maxGroundedSpeed = 60;
 	        maxGrindSpeed = 50;
-	        maxDropHeight = 10;
+	        maxDropHeight = 8f;
 	        maxJumpForce = 9f;
 
 	        enable_Rolling = false;
@@ -203,7 +212,7 @@ namespace BillORumble
 	        {
 		        {RumbleEvents.GrindEnter, new RumbleSettings(motor_level: 0.2f, min_time: .15f)},
 		        {RumbleEvents.Pop, new RumbleSettings(min_motor_level: 0.2f, max_motor_level: 0.5f, min_time: 0.2f)},
-		        {RumbleEvents.Land, new RumbleSettings(min_motor_level: 0.3f, max_motor_level: 1f, min_time: 0.2f, max_time: 1f)},
+		        {RumbleEvents.Land, new RumbleSettings(min_motor_level: 0.3f, max_motor_level: 10f, min_time: 0.2f, max_time: 1f)},
 		        {RumbleEvents.Push, new RumbleSettings(motor_level: 0.18f, min_time: 0.4f)},
 		        {RumbleEvents.Catch, new RumbleSettings(motor_level: 0.2f, min_time: 0.15f)},
 		        {RumbleEvents.Bail, new RumbleSettings(motor_level: 1, min_time: 0.8f)},
@@ -269,15 +278,9 @@ namespace BillORumble
             }
         }
 
-	    private Vector3 boardVelocity => PlayerController.Instance.boardController.boardRigidbody.velocity;
-	    private float boardHeight => PlayerController.Instance.boardController.boardTransform.position.y;
-
-	    private float maxHeight = Mathf.NegativeInfinity;
-	    private float dropHeight;
-
         private void FixedUpdate()
         {
-            if (doRumble == false)
+            if (doRumble == false || isSkating == false)
             {
                 return;
             }
@@ -355,6 +358,7 @@ namespace BillORumble
             switch (runEvent)
             {
                 case BailEvent bail_event:
+                    isSkating = false;
                     isGrounded = false;
                     isGrinding = false;
 	                InputController.Instance.player.StopVibration();
@@ -383,6 +387,10 @@ namespace BillORumble
                 case PushEvent push_event:
                     TriggerEvent(RumbleEvents.Push);
                     break;
+	            case RespawnEvent respawn_event:
+		            InputController.Instance.player.StopVibration();
+		            isSkating = true;
+		            break;
             }
         }
 
