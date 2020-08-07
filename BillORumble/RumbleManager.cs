@@ -27,6 +27,7 @@ namespace BillORumble
             public int MotorIndex = 0;
             public float MinTime;
             public float MaxTime;
+            public float Delay = 0;
 
             public float GetMotorLevel(float fraction)
             {
@@ -128,9 +129,10 @@ namespace BillORumble
                 p.Value.Enabled = PlayerPrefs.GetInt(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.Enabled)}") == 1;
                 p.Value.MinMotorLevel = PlayerPrefs.GetFloat(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.MinMotorLevel)}");
                 p.Value.MaxMotorLevel = PlayerPrefs.GetFloat(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.MaxMotorLevel)}");
-                p.Value.MinTime = PlayerPrefs.GetFloat(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.MinTime)}");
+	            p.Value.MotorIndex = PlayerPrefs.GetInt(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.MotorIndex)}");
+				p.Value.MinTime = PlayerPrefs.GetFloat(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.MinTime)}");
                 p.Value.MaxTime = PlayerPrefs.GetFloat(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.MaxTime)}");
-                p.Value.MotorIndex = PlayerPrefs.GetInt(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.MotorIndex)}");
+                p.Value.Delay = PlayerPrefs.GetFloat(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.Delay)}");
             }
 
             enable_Rolling = PlayerPrefs.GetInt(key: $"BillORumble_Toggles_{nameof(enable_Rolling)}", defaultValue: 1) == 1;
@@ -168,6 +170,7 @@ namespace BillORumble
                 PlayerPrefs.SetFloat(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.MinTime)}", value: p.Value.MinTime);
                 PlayerPrefs.SetFloat(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.MaxTime)}", value: p.Value.MaxTime);
                 PlayerPrefs.SetInt(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.MotorIndex)}", value: p.Value.MotorIndex);
+                PlayerPrefs.SetFloat(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.Delay)}", value: p.Value.Delay);
             }
 
             PlayerPrefs.SetInt(key: $"BillORumble_Toggles_{nameof(enable_Rolling)}", value: enable_Rolling ? 1 : 0);
@@ -212,7 +215,7 @@ namespace BillORumble
 	        {
 		        {RumbleEvents.GrindEnter, new RumbleSettings(motor_level: 0.2f, min_time: .15f)},
 		        {RumbleEvents.Pop, new RumbleSettings(min_motor_level: 0.2f, max_motor_level: 0.5f, min_time: 0.2f)},
-		        {RumbleEvents.Land, new RumbleSettings(min_motor_level: 0.3f, max_motor_level: 10f, min_time: 0.2f, max_time: 1f)},
+		        {RumbleEvents.Land, new RumbleSettings(min_motor_level: 0.3f, max_motor_level: 10f, min_time: 0.2f, max_time: 1f) { Delay = 0.3f }},
 		        {RumbleEvents.Push, new RumbleSettings(motor_level: 0.18f, min_time: 0.4f)},
 		        {RumbleEvents.Catch, new RumbleSettings(motor_level: 0.2f, min_time: 0.15f)},
 		        {RumbleEvents.Bail, new RumbleSettings(motor_level: 1, min_time: 0.8f)},
@@ -236,8 +239,6 @@ namespace BillORumble
 		        {DeckSounds.GrindState.none, 0},
 		        {DeckSounds.GrindState.wood, 0.2f},
 	        };
-
-			SaveValues();
         }
 
 	    private void OnDisable()
@@ -262,11 +263,6 @@ namespace BillORumble
             }
         }
 
-        private void OnDestroy()
-        {
-            SaveValues();
-        }
-		
         private void Update()
         {
             if (Input.GetKeyDown(key: KeyCode.F9))
@@ -396,8 +392,24 @@ namespace BillORumble
 
         private void TriggerEvent(RumbleEvents evt, float fraction = 1f)
         {
-            if (rumbleEvents.TryGetValue(evt, out var e) && e.Enabled)
-                InputController.Instance.player.SetVibration(motorIndex: 0, motorLevel: e.GetMotorLevel(fraction: fraction), duration: e.GetTime(fraction: fraction));
+	        if (rumbleEvents.TryGetValue(evt, out var e) && e.Enabled)
+	        {
+		        if (e.Delay > 0)
+		        {
+			        IEnumerator routine()
+			        {
+				        yield return new WaitForSeconds(e.Delay);
+
+				        InputController.Instance.player.SetVibration(motorIndex: 0, motorLevel: e.GetMotorLevel(fraction: fraction), duration: e.GetTime(fraction: fraction));
+			        }
+
+			        StartCoroutine(routine());
+		        }
+		        else
+		        {
+					InputController.Instance.player.SetVibration(motorIndex: 0, motorLevel: e.GetMotorLevel(fraction: fraction), duration: e.GetTime(fraction: fraction));
+		        }
+	        }
         }
 
         private Rect windowRect = new Rect(x: 50, y: 50, width: 500, height: Screen.height - 100);
@@ -450,6 +462,7 @@ namespace BillORumble
                                 DrawField(label: "Motor Index", field: ref data.MotorIndex);
                                 DrawField(label: "Min Time", field: ref data.MinTime);
                                 DrawField(label: "Max Time", field: ref data.MaxTime);
+                                DrawField(label: "Delay", field: ref data.Delay);
                             }
                             GUILayout.EndVertical();
 
@@ -513,6 +526,7 @@ namespace BillORumble
                     if (GUILayout.Button(text: "Reset to Defaults"))
                     {
 						InitValues();
+						SaveValues();
                     }
 
                     GUILayout.EndArea();

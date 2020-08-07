@@ -2,6 +2,6 @@
     "Id": "BillORumble",
     "DisplayName": "Bill O'Rumble",
     "Author": "billowper",
-    "Version": "0.2.0",
+    "Version": "1.2.0",
     "EntryMethod": "BillORumble.Main.Load"
 }
