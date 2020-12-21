@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using GameManagement;
+using SkaterXL.Core;
 using UnityEngine;
 
 namespace BillORumble
@@ -70,9 +71,9 @@ namespace BillORumble
 	    private float maxGrindSpeed = 50;
 	    private float maxDropHeight = 10;
 	    private float maxJumpForce = 9f;
-
+        
 	    private Dictionary<RumbleEvents, RumbleSettings> rumbleEvents;
-	    private Dictionary<PlayerController.SurfaceTags, float> surfaceRumbleLookup;
+	    private Dictionary<SurfaceTags, float> surfaceRumbleLookup;
 	    private Dictionary<DeckSounds.GrindState, float> grindRumbleLookup;
 
         private bool enable_Rolling;
@@ -222,16 +223,16 @@ namespace BillORumble
 		        {RumbleEvents.Brake, new RumbleSettings(motor_level: 0.2f, min_time: 0.3f)},
 	        };
 
-	        surfaceRumbleLookup = new Dictionary<PlayerController.SurfaceTags, float>()
+	        surfaceRumbleLookup = new Dictionary<SurfaceTags, float>()
 	        {
-		        {PlayerController.SurfaceTags.None, 0},
-		        {PlayerController.SurfaceTags.Brick, 0.3f},
-		        {PlayerController.SurfaceTags.Concrete, 0.12f},
-		        {PlayerController.SurfaceTags.Grass, 0.4f},
-		        {PlayerController.SurfaceTags.Tarmac, 0.13f},
-		        {PlayerController.SurfaceTags.Wood, 0.185f}
+		        {SurfaceTags.None, 0},
+		        {SurfaceTags.Brick, 0.3f},
+		        {SurfaceTags.Concrete, 0.12f},
+		        {SurfaceTags.Grass, 0.4f},
+		        {SurfaceTags.Tarmac, 0.13f},
+		        {SurfaceTags.Wood, 0.185f}
 	        };
-
+            
 	        grindRumbleLookup = new Dictionary<DeckSounds.GrindState, float>()
 	        {
 		        {DeckSounds.GrindState.concrete, 0.3f},
@@ -500,9 +501,9 @@ namespace BillORumble
                         {
                             DrawField(label: "PowerSlide Multiplier", field: ref powerSlideMultiplier);
 
-                            foreach (PlayerController.SurfaceTags surface_tag in Enum.GetValues(enumType: typeof(PlayerController.SurfaceTags)))
+                            foreach (SurfaceTags surface_tag in Enum.GetValues(enumType: typeof(SurfaceTags)))
                             {
-                                if (surface_tag == PlayerController.SurfaceTags.None)
+                                if (surface_tag == SurfaceTags.None)
                                     continue;
 
                                 GUILayout.BeginHorizontal();
