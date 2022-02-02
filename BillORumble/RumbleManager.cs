@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using GameManagement;
 using SkaterXL.Core;
+using SkaterXL.Data;
 using UnityEngine;
 
 namespace BillORumble
