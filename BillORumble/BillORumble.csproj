@@ -46,10 +46,12 @@
     <Reference Include="Assembly-CSharp-firstpass">
       <HintPath>S:\SteamLibrary\steamapps\common\Skater XL\SkaterXL_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
     </Reference>
+    <Reference Include="BFSUtilities" />
     <Reference Include="Rewired_Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
     <Reference Include="SkaterXL.Core, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null">
       <HintPath>S:\SteamLibrary\steamapps\common\Skater XL\SkaterXL_Data\Managed\SkaterXL.Core.dll</HintPath>
     </Reference>
+    <Reference Include="SkaterXL.Data" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
