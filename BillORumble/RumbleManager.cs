@@ -2,9 +2,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using GameManagement;
+using Harmony;
 using SkaterXL.Core;
 using SkaterXL.Data;
+using SkaterXL.Gameplay;
 using UnityEngine;
+using UnityModManagerNet;
 
 namespace BillORumble
 {
@@ -41,7 +44,7 @@ namespace BillORumble
                 return Mathf.Lerp(a: MinTime, b: MaxTime, t: fraction);
             }
 
-            public RumbleSettings(float motor_level, float min_time) 
+            public RumbleSettings(float motor_level, float min_time)
             {
                 MinMotorLevel = motor_level;
                 MaxMotorLevel = motor_level;
@@ -54,28 +57,28 @@ namespace BillORumble
                 MinMotorLevel = min_motor_level;
                 MaxMotorLevel = max_motor_level;
                 MinTime = min_time;
-	            MaxTime = min_time;
+                MaxTime = min_time;
             }
 
             public RumbleSettings(float min_motor_level, float max_motor_level, float min_time, float max_time)
             {
-	            MinMotorLevel = min_motor_level;
-	            MaxMotorLevel = max_motor_level;
-	            MinTime = min_time;
-	            MaxTime = max_time;
+                MinMotorLevel = min_motor_level;
+                MaxMotorLevel = max_motor_level;
+                MinTime = min_time;
+                MaxTime = max_time;
             }
         }
 
-		// config
+        // config
 
-	    private float maxGroundedSpeed = 60;
-	    private float maxGrindSpeed = 50;
-	    private float maxDropHeight = 10;
-	    private float maxJumpForce = 9f;
-        
-	    private Dictionary<RumbleEvents, RumbleSettings> rumbleEvents;
-	    private Dictionary<SurfaceTags, float> surfaceRumbleLookup;
-	    private Dictionary<DeckSounds.GrindState, float> grindRumbleLookup;
+        private float maxGroundedSpeed = 60;
+        private float maxGrindSpeed = 50;
+        private float maxDropHeight = 10;
+        private float maxJumpForce = 9f;
+
+        private Dictionary<RumbleEvents, RumbleSettings> rumbleEvents;
+        private Dictionary<SurfaceTags, float> surfaceRumbleLookup;
+        private Dictionary<GrindTag, float> grindRumbleLookup;
 
         private bool enable_Rolling;
         private bool enable_Grinding;
@@ -85,29 +88,28 @@ namespace BillORumble
         private float slideMultiplier = 0.5f;
         private float grindMultiplier = 1f;
 
-		// state
+        // state
 
-	    private bool showUI;
+        private bool showUI;
 
         private bool doRumble = true;
         private bool isSkating;
         private bool isGrinding;
         private bool isGrounded;
         private bool wasPowerSliding;
-	    private float maxHeight = Mathf.NegativeInfinity;
-	    private float dropHeight;
+        private float maxHeight = Mathf.NegativeInfinity;
+        private float dropHeight;
 
-		// helpers
+        // helpers
 
-	    private Vector3 boardVelocity => PlayerController.Instance.boardController.boardRigidbody.velocity;
-	    private float boardHeight => PlayerController.Instance.boardController.boardTransform.position.y;
+        private Vector3 boardVelocity => GameStateMachine.Instance.MainPlayer.gameplay.boardController.boardRigidbody.velocity;
 
         private void OnEnable()
         {
-	        InitValues();
+            InitValues();
 
             GameStateMachine.Instance.OnGameStateChanged += GameStateMachine_OnGameStateChanged;
-            EventManager.Instance.onGPEvent += EventManager_onRunEvent;
+            GameStateMachine.Instance.MainPlayer.gameplay.trickController.onGPEvent += EventManager_onRunEvent;
 
             if (PlayerPrefs.HasKey(key: "BillORumble_InitialValuesSaved") == false)
             {
@@ -115,14 +117,14 @@ namespace BillORumble
             }
             else
             {
-	            LoadValues();
+                LoadValues();
             }
         }
 
-	    private void LoadValues()
-	    {
-		    maxJumpForce = PlayerPrefs.GetFloat(key: $"BillORumble_Settings_{nameof(maxJumpForce)}");
-	        maxDropHeight = PlayerPrefs.GetFloat(key: $"BillORumble_Settings_{nameof(maxDropHeight)}");
+        private void LoadValues()
+        {
+            maxJumpForce = PlayerPrefs.GetFloat(key: $"BillORumble_Settings_{nameof(maxJumpForce)}");
+            maxDropHeight = PlayerPrefs.GetFloat(key: $"BillORumble_Settings_{nameof(maxDropHeight)}");
             maxGrindSpeed = PlayerPrefs.GetFloat(key: $"BillORumble_Settings_{nameof(maxGrindSpeed)}");
             maxGroundedSpeed = PlayerPrefs.GetFloat(key: $"BillORumble_Settings_{nameof(maxGroundedSpeed)}");
 
@@ -131,8 +133,8 @@ namespace BillORumble
                 p.Value.Enabled = PlayerPrefs.GetInt(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.Enabled)}") == 1;
                 p.Value.MinMotorLevel = PlayerPrefs.GetFloat(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.MinMotorLevel)}");
                 p.Value.MaxMotorLevel = PlayerPrefs.GetFloat(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.MaxMotorLevel)}");
-	            p.Value.MotorIndex = PlayerPrefs.GetInt(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.MotorIndex)}");
-				p.Value.MinTime = PlayerPrefs.GetFloat(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.MinTime)}");
+                p.Value.MotorIndex = PlayerPrefs.GetInt(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.MotorIndex)}");
+                p.Value.MinTime = PlayerPrefs.GetFloat(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.MinTime)}");
                 p.Value.MaxTime = PlayerPrefs.GetFloat(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.MaxTime)}");
                 p.Value.Delay = PlayerPrefs.GetFloat(key: $"BillORumble_Event_{p.Key}_{nameof(p.Value.Delay)}");
             }
@@ -155,9 +157,9 @@ namespace BillORumble
             {
                 grindRumbleLookup[key: k] = PlayerPrefs.GetFloat(key: $"BillORumble_Grinds_{k}");
             }
-	    }
+        }
 
-		private void SaveValues()
+        private void SaveValues()
         {
             PlayerPrefs.SetFloat(key: $"BillORumble_Settings_{nameof(maxJumpForce)}", value: maxJumpForce);
             PlayerPrefs.SetFloat(key: $"BillORumble_Settings_{nameof(maxDropHeight)}", value: maxDropHeight);
@@ -200,55 +202,54 @@ namespace BillORumble
 
         private void InitValues()
         {
-	        maxGroundedSpeed = 60;
-	        maxGrindSpeed = 50;
-	        maxDropHeight = 8f;
-	        maxJumpForce = 9f;
+            maxGroundedSpeed = 60;
+            maxGrindSpeed = 50;
+            maxDropHeight = 8f;
+            maxJumpForce = 9f;
 
-	        enable_Rolling = false;
-	        enable_Grinding = true;
-	        enable_PowerSlide = true;
+            enable_Rolling = false;
+            enable_Grinding = true;
+            enable_PowerSlide = true;
 
-	        powerSlideMultiplier = 10;
-	        slideMultiplier = 0.5f;
-	        grindMultiplier = 1f;
+            powerSlideMultiplier = 10;
+            slideMultiplier = 0.5f;
+            grindMultiplier = 1f;
 
-	        rumbleEvents = new Dictionary<RumbleEvents, RumbleSettings>()
-	        {
-		        {RumbleEvents.GrindEnter, new RumbleSettings(motor_level: 0.2f, min_time: .15f)},
-		        {RumbleEvents.Pop, new RumbleSettings(min_motor_level: 0.2f, max_motor_level: 0.5f, min_time: 0.2f)},
-		        {RumbleEvents.Land, new RumbleSettings(min_motor_level: 0.3f, max_motor_level: 10f, min_time: 0.2f, max_time: 1f) { Delay = 0.3f }},
-		        {RumbleEvents.Push, new RumbleSettings(motor_level: 0.18f, min_time: 0.4f)},
-		        {RumbleEvents.Catch, new RumbleSettings(motor_level: 0.2f, min_time: 0.15f)},
-		        {RumbleEvents.Bail, new RumbleSettings(motor_level: 1, min_time: 0.8f)},
-		        {RumbleEvents.Brake, new RumbleSettings(motor_level: 0.2f, min_time: 0.3f)},
-	        };
+            rumbleEvents = new Dictionary<RumbleEvents, RumbleSettings>()
+            {
+                {RumbleEvents.GrindEnter, new RumbleSettings(motor_level: 0.1f, min_time: .15f)},
+                {RumbleEvents.Pop, new RumbleSettings(min_motor_level: 0.05f, max_motor_level: 0.15f, min_time: 0.2f)},
+                {RumbleEvents.Land, new RumbleSettings(min_motor_level: 0.075f, max_motor_level: 1f, min_time: 0f, max_time: 1f)},
+                {RumbleEvents.Push, new RumbleSettings(motor_level: 0f, min_time: 0.2f)},
+                {RumbleEvents.Catch, new RumbleSettings(motor_level: 0.1f, min_time: 0.075f)},
+                {RumbleEvents.Bail, new RumbleSettings(motor_level: .75f, min_time: 0.4f)},
+                {RumbleEvents.Brake, new RumbleSettings(motor_level: 0.1f, min_time: 0.15f)}
+            };
 
-	        surfaceRumbleLookup = new Dictionary<SurfaceTags, float>()
-	        {
-		        {SurfaceTags.None, 0},
-		        {SurfaceTags.Brick, 0.3f},
-		        {SurfaceTags.Concrete, 0.12f},
-		        {SurfaceTags.Grass, 0.4f},
-		        {SurfaceTags.Tarmac, 0.13f},
-		        {SurfaceTags.Wood, 0.185f}
-	        };
-            
-	        grindRumbleLookup = new Dictionary<DeckSounds.GrindState, float>()
-	        {
-		        {DeckSounds.GrindState.concrete, 0.3f},
-		        {DeckSounds.GrindState.metal, 0.1f},
-		        {DeckSounds.GrindState.none, 0},
-		        {DeckSounds.GrindState.wood, 0.2f},
-	        };
+            surfaceRumbleLookup = new Dictionary<SurfaceTags, float>()
+            {
+                {SurfaceTags.None, 0},
+                {SurfaceTags.Brick, 0.4f},
+                {SurfaceTags.Concrete, 0.12f},
+                {SurfaceTags.Grass, 0.4f},
+                {SurfaceTags.Tarmac, 0.13f},
+                {SurfaceTags.Wood, 0.185f}
+            };
+
+            grindRumbleLookup = new Dictionary<GrindTag, float>()
+            {
+                {GrindTag.Concrete, 0.3f},
+                {GrindTag.Metal, 0.1f},
+                {GrindTag.Wood, 0.2f},
+            };
         }
 
-	    private void OnDisable()
+        private void OnDisable()
         {
-            InputController.Instance.player.StopVibration();
+            GameStateMachine.Instance.MainPlayer.gameplay.inputController.rewiredPlayer.StopVibration();
 
             GameStateMachine.Instance.OnGameStateChanged -= GameStateMachine_OnGameStateChanged;
-            EventManager.Instance.onGPEvent -= EventManager_onRunEvent;
+            GameStateMachine.Instance.MainPlayer.gameplay.trickController.onGPEvent -= EventManager_onRunEvent;
         }
 
         private void GameStateMachine_OnGameStateChanged(Type prevState, Type newState)
@@ -259,8 +260,6 @@ namespace BillORumble
             }
             else
             {
-                InputController.Instance.player.StopVibration();
-
                 doRumble = false;
             }
         }
@@ -283,57 +282,51 @@ namespace BillORumble
                 return;
             }
 
-	        if (isGrounded == false)
-	        {
-		        if (boardHeight > maxHeight)
-		        {
-			        maxHeight = boardHeight;
-		        }
-	        }
-			
-            if (isGrounded == false && PlayerController.Instance.PredictLanding())
+            if (!isGrounded)
             {
-				isGrounded = true;
+                GameStateMachine.Instance.MainPlayer.gameplay.inputController.rewiredPlayer.StopVibration();
 
-	            dropHeight = Mathf.Abs(maxHeight - boardHeight);
-	            maxHeight = Mathf.NegativeInfinity;
+                if (GameStateMachine.Instance.MainPlayer.gameplay.transformReference.boardTransform.position.y > maxHeight)
+                {
+                    maxHeight = GameStateMachine.Instance.MainPlayer.gameplay.transformReference.boardTransform.position.y;
+                }
 
-	            var factor = Mathf.Clamp01(dropHeight / maxDropHeight);
-
-                TriggerEvent(RumbleEvents.Land, factor);
-
-                return;
+                if (GameStateMachine.Instance.MainPlayer.gameplay.playerData.currentState == PlayerStateEnum.Impact || GameStateMachine.Instance.MainPlayer.gameplay.playerData.IsOnGroundState()) DoLand();
             }
-
-            if (isGrounded)
+            else
             {
-                var speed_factor = Mathf.Clamp01(value: Mathf.Abs(f: boardVelocity.magnitude) / maxGroundedSpeed);
-                var surface_type = PlayerController.Instance.GetSurfaceTag(_tag: PlayerController.Instance.boardController.GetSurfaceTagString());
-                var rumble = surfaceRumbleLookup[key: surface_type];
-
-                var do_rumble = enable_Rolling;
-
-                if (EventManager.Instance.IsPowerSliding && enable_PowerSlide)
+                try
                 {
-                    rumble *= powerSlideMultiplier;
-                    do_rumble = true;
-                    wasPowerSliding = true;
-                }
+                    RaycastHit hit = (RaycastHit)Traverse.Create(GameStateMachine.Instance.MainPlayer.gameplay.boardController).Field("_rayCastHit").GetValue();
+                    var speed_factor = Mathf.Clamp01(value: Mathf.Abs(f: boardVelocity.magnitude) / maxGroundedSpeed);
+                    var surface_type = GameStateMachine.Instance.MainPlayer.gameplay.boardController.GetSurfaceTag(hit);
+                    var rumble = surfaceRumbleLookup[key: surface_type];
 
-                if (EventManager.Instance.IsManualling && enable_Rolling)
-                {
-                    rumble *= 0.5f;
-                    do_rumble = true;
-                }
+                    var do_rumble = enable_Rolling;
 
-                if (do_rumble)
-                    InputController.Instance.player.SetVibration(motorIndex: 1, motorLevel: rumble * speed_factor);
+                    if (GameStateMachine.Instance.MainPlayer.gameplay.trickController.IsPowerSliding && enable_PowerSlide)
+                    {
+                        rumble *= powerSlideMultiplier;
+                        do_rumble = true;
+                        wasPowerSliding = true;
+                    }
 
-                else if (wasPowerSliding && EventManager.Instance.IsPowerSliding == false)
-                {
-                    InputController.Instance.player.StopVibration();
-                    wasPowerSliding = false;
+                    if (GameStateMachine.Instance.MainPlayer.gameplay.trickController.IsManualling && enable_Rolling)
+                    {
+                        rumble *= 0.5f;
+                        do_rumble = true;
+                    }
+
+                    if (do_rumble)
+                        GameStateMachine.Instance.MainPlayer.gameplay.inputController.rewiredPlayer.SetVibration(motorIndex: 1, motorLevel: rumble * speed_factor);
+
+                    else if (wasPowerSliding && GameStateMachine.Instance.MainPlayer.gameplay.trickController.IsPowerSliding == false)
+                    {
+                        GameStateMachine.Instance.MainPlayer.gameplay.inputController.rewiredPlayer.StopVibration();
+                        wasPowerSliding = false;
+                    }
                 }
+                catch { }
             }
 
             if (enable_Grinding)
@@ -341,12 +334,24 @@ namespace BillORumble
                 if (isGrinding)
                 {
                     var speed_factor = 1f - Mathf.Clamp01(value: Mathf.Abs(f: boardVelocity.magnitude) / maxGrindSpeed);
-                    var rumble = grindRumbleLookup[key: DeckSounds.Instance.grindState];
-                    var v = rumble * speed_factor * (PlayerController.Instance.boardController.isSliding ? slideMultiplier : grindMultiplier);
+                    var rumble = grindRumbleLookup[key: GameStateMachine.Instance.MainPlayer.gameplay.playerData.grind.surface];
+                    var v = rumble * speed_factor * (GameStateMachine.Instance.MainPlayer.gameplay.playerData.grind.isSliding ? slideMultiplier : grindMultiplier);
 
-                    InputController.Instance.player.SetVibration(motorIndex: 1, motorLevel: v);
+                    GameStateMachine.Instance.MainPlayer.gameplay.inputController.rewiredPlayer.SetVibration(motorIndex: 1, motorLevel: v);
                 }
             }
+        }
+
+        void DoLand()
+        {
+            isGrounded = true;
+
+            dropHeight = Mathf.Abs(maxHeight - GameStateMachine.Instance.MainPlayer.gameplay.transformReference.boardTransform.position.y);
+            maxHeight = Mathf.NegativeInfinity;
+
+            var factor = Mathf.Clamp01((dropHeight / maxDropHeight) * GameStateMachine.Instance.MainPlayer.gameplay.playerData.animation.Impact);
+
+            TriggerEvent(RumbleEvents.Land, factor);
         }
 
         private void EventManager_onRunEvent(GPEvent runEvent)
@@ -356,10 +361,9 @@ namespace BillORumble
             switch (runEvent)
             {
                 case BailEvent bail_event:
+                    GameStateMachine.Instance.MainPlayer.gameplay.inputController.rewiredPlayer.StopVibration();
                     isSkating = false;
-                    isGrounded = false;
                     isGrinding = false;
-	                InputController.Instance.player.StopVibration();
                     TriggerEvent(RumbleEvents.Bail);
                     break;
                 case BrakeEvent brake_event:
@@ -374,50 +378,50 @@ namespace BillORumble
                     break;
                 case GrindExitEvent grind_exit_event:
                     isGrinding = false;
-                    InputController.Instance.player.StopVibration();
+                    GameStateMachine.Instance.MainPlayer.gameplay.inputController.rewiredPlayer.StopVibration();
                     break;
                 case JumpEvent jump_event:
                     isGrounded = false;
                     isGrinding = false;
-	                InputController.Instance.player.StopVibration();
-					TriggerEvent(RumbleEvents.Pop, Mathf.Clamp01(value: jump_event.popForce / maxJumpForce));
+                    GameStateMachine.Instance.MainPlayer.gameplay.inputController.rewiredPlayer.StopVibration();
+                    TriggerEvent(RumbleEvents.Pop, Mathf.Clamp01(value: jump_event.popForce / maxJumpForce));
                     break;
-                case PushEvent push_event:
-                    TriggerEvent(RumbleEvents.Push);
+                case RespawnEvent respawn_event:
+                    GameStateMachine.Instance.MainPlayer.gameplay.inputController.rewiredPlayer.StopVibration();
+                    GameStateMachine.Instance.MainPlayer.gameplay.inputController.rewiredPlayer.SetVibration(motorIndex: 0, motorLevel: 0);
+                    GameStateMachine.Instance.MainPlayer.gameplay.inputController.rewiredPlayer.SetVibration(motorIndex: 1, motorLevel: 0);
+                    isSkating = true;
+                    isGrounded = true;
                     break;
-	            case RespawnEvent respawn_event:
-		            InputController.Instance.player.StopVibration();
-		            isSkating = true;
-		            break;
             }
         }
 
         private void TriggerEvent(RumbleEvents evt, float fraction = 1f)
         {
-	        if (rumbleEvents.TryGetValue(evt, out var e) && e.Enabled)
-	        {
-		        if (e.Delay > 0)
-		        {
-			        IEnumerator routine()
-			        {
-				        yield return new WaitForSeconds(e.Delay);
+            if (rumbleEvents.TryGetValue(evt, out var e) && e.Enabled)
+            {
+                if (e.Delay > 0)
+                {
+                    IEnumerator routine()
+                    {
+                        yield return new WaitForSeconds(e.Delay);
 
-				        InputController.Instance.player.SetVibration(motorIndex: 0, motorLevel: e.GetMotorLevel(fraction: fraction), duration: e.GetTime(fraction: fraction));
-			        }
+                        GameStateMachine.Instance.MainPlayer.gameplay.inputController.rewiredPlayer.SetVibration(motorIndex: 0, motorLevel: e.GetMotorLevel(fraction: fraction), duration: e.GetTime(fraction: fraction));
+                    }
 
-			        StartCoroutine(routine());
-		        }
-		        else
-		        {
-					InputController.Instance.player.SetVibration(motorIndex: 0, motorLevel: e.GetMotorLevel(fraction: fraction), duration: e.GetTime(fraction: fraction));
-		        }
-	        }
+                    StartCoroutine(routine());
+                }
+                else
+                {
+                    GameStateMachine.Instance.MainPlayer.gameplay.inputController.rewiredPlayer.SetVibration(motorIndex: 0, motorLevel: e.GetMotorLevel(fraction: fraction), duration: e.GetTime(fraction: fraction));
+                }
+            }
         }
 
         private Rect windowRect = new Rect(x: 50, y: 50, width: 500, height: Screen.height - 100);
         private Vector2 scroll;
 
-	    private void OnGUI()
+        private void OnGUI()
         {
             if (showUI == false)
                 return;
@@ -425,11 +429,11 @@ namespace BillORumble
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
 
-            windowRect = GUI.Window(id: 0,
+            windowRect = GUI.Window(id: 50,
                 clientRect: windowRect,
                 func: id =>
                 {
-                    GUILayout.BeginVertical(style: new GUIStyle {padding = new RectOffset(left: 10, right: 10, top: 50, bottom: 10)});
+                    GUILayout.BeginVertical(style: new GUIStyle { padding = new RectOffset(left: 10, right: 10, top: 50, bottom: 10) });
                     {
                         scroll = GUILayout.BeginScrollView(scroll);
 
@@ -442,8 +446,8 @@ namespace BillORumble
                         DrawField(label: "Max Speed", field: ref maxGroundedSpeed);
                         DrawField(label: "Max Grind Speed", field: ref maxGrindSpeed);
 
-						GUILayout.Label($"Max Height = {maxHeight}");
-						GUILayout.Label($"Last Drop Height = {dropHeight}");
+                        GUILayout.Label($"Max Height = {maxHeight}");
+                        GUILayout.Label($"Last Drop Height = {dropHeight}");
 
                         GUILayout.EndVertical();
 
@@ -479,17 +483,19 @@ namespace BillORumble
                         {
                             DrawField(label: "Grind Multiplier", field: ref grindMultiplier);
                             DrawField(label: "Slide Multiplier", field: ref slideMultiplier);
-                            foreach (DeckSounds.GrindState grind_state in Enum.GetValues(enumType: typeof(DeckSounds.GrindState)))
+                            try
                             {
-                                if (grind_state == DeckSounds.GrindState.none)
-                                    continue;
-
-                                GUILayout.BeginHorizontal();
-                                GUILayout.Label(text: $"{grind_state}");
-                                var st = GUILayout.TextField(text: grindRumbleLookup[key: grind_state].ToString(format: "0.000"));
-                                grindRumbleLookup[key: grind_state] = float.Parse(s: st);
-                                GUILayout.EndHorizontal();
+                                List<GrindTag> keyList = new List<GrindTag>(grindRumbleLookup.Keys);
+                                foreach (GrindTag grind_state in keyList)
+                                {
+                                    GUILayout.BeginHorizontal();
+                                    GUILayout.Label(text: $"{grind_state}");
+                                    var st = GUILayout.TextField(text: grindRumbleLookup[grind_state].ToString(format: "0.000"));
+                                    grindRumbleLookup[grind_state] = float.Parse(s: st);
+                                    GUILayout.EndHorizontal();
+                                }
                             }
+                            catch (Exception e) { UnityModManager.Logger.Log(e.Message); }
                         }
                         GUILayout.EndVertical();
 
@@ -524,11 +530,11 @@ namespace BillORumble
                         showUI = false;
                         Cursor.visible = false;
                     }
-					
+
                     if (GUILayout.Button(text: "Reset to Defaults"))
                     {
-						InitValues();
-						SaveValues();
+                        InitValues();
+                        SaveValues();
                     }
 
                     GUILayout.EndArea();
